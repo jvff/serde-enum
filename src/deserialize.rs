@@ -80,12 +80,15 @@ fn build_visitor(name: &Ident, generics: &TypeGenerics, data: &DataEnum) -> Quot
 
                 let (variant_id, variant_visitor): (u64, _) = enum_visitor.variant()?;
 
-                match variant_id as i64 {
-                    #( #variant_id => #variant_deserialization, )*
-                    _ => Err(::serde::de::Error::unknown_variant(
+                #(
+                    if variant_id as u32 == (#variant_id) {
+                        #variant_deserialization
+                    } else
+                )* {
+                    Err(::serde::de::Error::unknown_variant(
                         &format!("? (discriminator is {})", variant_id),
                         VARIANTS,
-                    )),
+                    ))
                 }
             }
         }
