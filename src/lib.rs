@@ -8,7 +8,7 @@ mod serialize;
 use crate::proc_macro::TokenStream;
 use proc_macro2::TokenStream as QuoteOutput;
 use quote::quote;
-use syn::{parse, Data, DataEnum, DeriveInput, Expr, ExprLit, Lit};
+use syn::{parse, Data, DataEnum, DeriveInput, Expr, ExprLit, Lit, Variant};
 
 #[proc_macro_derive(DeserializeEnum)]
 pub fn derive_deserialize_enum(input: TokenStream) -> TokenStream {
@@ -34,25 +34,32 @@ fn get_enum_data(input: &DeriveInput) -> &DataEnum {
 fn collect_variant_ids(data: &DataEnum) -> Vec<QuoteOutput> {
     data.variants
         .iter()
-        .scan(0_i64, |index, variant| match &variant.discriminant {
-            Some((
+        .scan(0_i64, |index, variant| {
+            retrieve_discriminant_id(variant)
+                .or_else(|| {
+                    let id = *index;
+                    Some((id, quote! { #id }))
+                })
+                .map(|(id_value, id_tokens)| {
+                    *index = id_value + 1;
+                    id_tokens
+                })
+        })
+        .collect()
+}
+
+fn retrieve_discriminant_id(variant: &Variant) -> Option<(i64, QuoteOutput)> {
+    variant
+        .discriminant
+        .as_ref()
+        .map(|discriminant| match discriminant {
+            (
                 _,
                 Expr::Lit(ExprLit {
                     lit: Lit::Int(value),
                     ..
                 }),
-            )) => {
-                *index = value.value() as i64 + 1;
-                Some(quote! { #value })
-            }
-            Some(_) => panic!("Expecting enum with integer discriminants"),
-            None => {
-                let id = *index;
-
-                *index += 1;
-
-                Some(quote! { #id })
-            }
+            ) => (value.value() as i64, quote! { #value }),
+            _ => panic!("Expecting enum with integer discriminants"),
         })
-        .collect()
 }
