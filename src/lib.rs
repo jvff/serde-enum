@@ -4,10 +4,11 @@ extern crate proc_macro;
 
 mod deserialize;
 mod serialize;
+mod variant_id;
 
-use crate::proc_macro::TokenStream;
+use crate::{proc_macro::TokenStream, variant_id::VariantId};
 use proc_macro2::TokenStream as QuoteOutput;
-use quote::quote;
+use quote::ToTokens;
 use syn::{parse, Data, DataEnum, DeriveInput, Expr, ExprLit, Lit, Variant};
 
 #[proc_macro_derive(DeserializeEnum)]
@@ -34,21 +35,17 @@ fn get_enum_data(input: &DeriveInput) -> &DataEnum {
 fn collect_variant_ids(data: &DataEnum) -> Vec<QuoteOutput> {
     data.variants
         .iter()
-        .scan(0_i64, |index, variant| {
-            retrieve_discriminant_id(variant)
-                .or_else(|| {
-                    let id = *index;
-                    Some((id, quote! { #id }))
-                })
-                .map(|(id_value, id_tokens)| {
-                    *index = id_value + 1;
-                    id_tokens
-                })
+        .scan(VariantId::default(), |variant_id, variant| {
+            let new_variant_id =
+                retrieve_discriminant_id(variant).unwrap_or_else(|| variant_id.clone());
+
+            *variant_id = new_variant_id.next();
+            Some(new_variant_id.into_token_stream())
         })
         .collect()
 }
 
-fn retrieve_discriminant_id(variant: &Variant) -> Option<(i64, QuoteOutput)> {
+fn retrieve_discriminant_id(variant: &Variant) -> Option<VariantId> {
     variant
         .discriminant
         .as_ref()
@@ -59,7 +56,7 @@ fn retrieve_discriminant_id(variant: &Variant) -> Option<(i64, QuoteOutput)> {
                     lit: Lit::Int(value),
                     ..
                 }),
-            ) => (value.value() as i64, quote! { #value }),
+            ) => VariantId::from_value(value.value() as u32),
             _ => panic!("Expecting enum with integer discriminants"),
         })
 }
