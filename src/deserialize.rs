@@ -119,7 +119,7 @@ fn generate_variant_deserializations(enum_name: &Ident, data: &DataEnum) -> Vec<
                         unimplemented!();
                     }
                 }
-                Fields::Named(fields) => {
+                Fields::Named(_) => {
                     unimplemented!();
                 }
             }
