@@ -113,7 +113,7 @@ fn generate_variant_deserializations(enum_name: &Ident, data: &DataEnum) -> Vec<
 
                     if field_count == 1 {
                         quote! {
-                            Ok(#enum_name::#variant_name(variant_visitor.new_type_variant()?))
+                            Ok(#enum_name::#variant_name(variant_visitor.newtype_variant()?))
                         }
                     } else {
                         unimplemented!();
