@@ -60,7 +60,7 @@ fn generate_field_names<'a>(fields: impl Iterator<Item = &'a Field>) -> Vec<Quot
         .map(|(field, index)| match &field.ident {
             Some(identifier) => quote! { #identifier },
             None => {
-                let id = LitStr::new(&format!("_{}", index), Span::call_site());
+                let id = Ident::new(&format!("_{}", index), Span::call_site());
 
                 quote! { #id }
             }
