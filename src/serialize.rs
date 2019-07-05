@@ -90,7 +90,7 @@ fn generate_serializations(name: &Ident, data: &DataEnum) -> Vec<QuoteOutput> {
                         let value = &field_names[0];
 
                         quote! {
-                            seralizer.serialize_newtype_variant(
+                            serializer.serialize_newtype_variant(
                                 #name_str,
                                 #id as u32,
                                 #variant_name,
